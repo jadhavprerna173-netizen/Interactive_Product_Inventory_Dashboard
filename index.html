@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Product Inventory & Analytics Dashboard</title>
+<style>
+  
+
+/* PREMIUM AURORA DASHBOARD */
+body {
+  margin: 0;
+  color: #f5f3ff;
+  background: #0a0716;
+  font-family: "Segoe UI", sans-serif;
+  overflow-x: hidden;
+  isolation: isolate;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -50%;
+  z-index: -2;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    #190d36,
+    #512080,
+    #0d5b72,
+    #341454,
+    #a21caf,
+    #190d36
+  );
+  filter: blur(100px);
+  opacity: .55;
+  animation: auroraRotate 24s linear infinite;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 15% 10%,
+      rgba(236,72,153,.15), transparent 38%),
+    radial-gradient(ellipse at 85% 80%,
+      rgba(34,211,238,.14), transparent 40%);
+}
+
+@keyframes auroraRotate {
+  from { transform: rotate(0deg) scale(1); }
+  to { transform: rotate(360deg) scale(1.12); }
+}
+
+/* Floating glass panels */
+.card, .panel {
+  background: linear-gradient(
+    145deg,
+    rgba(35, 25, 61, .82),
+    rgba(16, 13, 35, .88)
+  );
+  color: #f5f3ff;
+  border: 1px solid rgba(216, 180, 254, .18);
+  border-radius: 22px;
+  backdrop-filter: blur(22px);
+  box-shadow: 0 15px 45px rgba(0,0,0,.25);
+  transition:
+    transform .35s cubic-bezier(.2,.8,.2,1),
+    border-color .35s,
+    box-shadow .35s;
+}
+
+.card:hover, .panel:hover {
+  transform: translateY(-6px) scale(1.01);
+  border-color: rgba(216,180,254,.6);
+  box-shadow:
+    0 22px 50px rgba(124,58,237,.18),
+    0 0 24px rgba(217,70,239,.08);
+}
+
+/* Gradient headings */
+h1, h2 {
+  background: linear-gradient(100deg, #fff, #d8b4fe, #67e8f9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Inputs */
+input, select, textarea {
+  background: rgba(12, 9, 28, .85);
+  color: #faf5ff;
+  border: 1px solid #49356b;
+  border-radius: 12px;
+  padding: 11px 13px;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #d946ef;
+  box-shadow: 0 0 0 4px rgba(217,70,239,.12);
+}
+
+/* Gradient action buttons */
+button {
+  background: linear-gradient(115deg, #7c3aed, #c026d3, #0891b2);
+  background-size: 200% 200%;
+  color: white;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 11px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background-position .35s, transform .25s, box-shadow .25s;
+}
+
+button:hover {
+  background-position: 100% 50%;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(192,38,211,.22);
+}
+
+/* Table */
+table { width: 100%; border-collapse: collapse; }
+
+th {
+  color: #e9d5ff;
+  background: rgba(124,58,237,.16);
+}
+
+td, th {
+  padding: 12px;
+  border-bottom: 1px solid rgba(216,180,254,.12);
+}
+
+tbody tr:hover {
+  background: rgba(192,132,252,.08);
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+  *, *::before, *::after {
+    transition-duration: .01ms !important;
+  }
+}
+
+</style>
+</head>
+<body>
+<header>
+  <h1>Product Inventory & Analytics Dashboard</h1>
+  <p>Manage products, search inventory, and calculate tax, discounts, and stock value.</p>
+</header>
+<main>
+  <section class="stats">
+    <div class="card"><span>Total products</span><strong id="productCount">0</strong></div>
+    <div class="card"><span>Total inventory value</span><strong id="inventoryValue">₹0.00</strong></div>
+    <div class="card"><span>Average product price</span><strong id="averagePrice">₹0.00</strong></div>
+    <div class="card"><span>Premium products</span><strong id="premiumCount">0</strong></div>
+  </section>
+
+  <section class="layout">
+    <div class="panel">
+      <h2>Add a product</h2>
+      <form id="productForm">
+        <label for="productName">Product name</label>
+        <input id="productName" type="text" placeholder="e.g. Headphones" maxlength="60" required>
+        <label for="productPrice">Price (₹)</label>
+        <input id="productPrice" type="number" min="0.01" step="0.01" placeholder="e.g. 1499" required>
+        <button type="submit">Add product</button>
+      </form>
+      <div id="addMessage" class="message" aria-live="polite"></div>
+      <p class="small">Category rules: Budget ≤ ₹500; Standard ≤ ₹2,000; Premium &gt; ₹2,000.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Search inventory</h2>
+      <label for="searchTerm">Product name</label>
+      <input id="searchTerm" type="text" placeholder="Type a name to search">
+      <button id="searchButton">Search</button>
+      <button id="showAllButton" class="secondary">Show all</button>
+      <div id="searchMessage" class="message" aria-live="polite"></div>
+      <hr style="border:0;border-top:1px solid #e2e8f0;margin:18px 0">
+      <h2>Price calculator</h2>
+      <label for="taxRate">Tax rate (%)</label>
+      <input id="taxRate" type="number" min="0" max="100" step="0.1" value="18">
+      <label for="discountRate">Discount (%)</label>
+      <input id="discountRate" type="number" min="0" max="100" step="0.1" value="10">
+      <button id="calculateButton">Calculate on selected products</button>
+      <p class="small">Select products using the checkboxes in the inventory table. If none are selected, the calculation uses all products.</p>
+      <div id="calculationResult" class="message" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="panel" style="margin-top:18px">
+    <h2>Inventory list</h2>
+    <p class="small">Tick products to include only those items in the price calculator. Use Delete to remove a product.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Select</th><th>#</th><th>Product</th><th>Price</th><th>Category badge</th><th>Action</th></tr></thead>
+        <tbody id="inventoryBody"></tbody>
+      </table>
+    </div>
+  </section>
+  <footer>Student project demonstration • Built with HTML, CSS, and JavaScript</footer>
+</main>
+
+<script>
+"use strict";
+
+// 1. Data initialization: an array containing objects.
+const inventory = [
+  { id: 1, name: "Notebook", price: 80 },
+  { id: 2, name: "Water Bottle", price: 350 },
+  { id: 3, name: "Keyboard", price: 1200 },
+  { id: 4, name: "Headphones", price: 2500 }
+];
+let nextId = 5;
+let visibleInventory = inventory.slice();
+
+// Regular function: returns a category based on the price.
+function getCategory(price) {
+  if (price <= 500) {
+    return "Budget";
+  } else if (price <= 2000) {
+    return "Standard";
+  } else {
+    return "Premium";
+  }
+}
+
+// Switch block: converts category to a display description.
+function getCategoryDescription(category) {
+  switch (category) {
+    case "Budget": return "Affordable product";
+    case "Standard": return "Mid-range product";
+    case "Premium": return "High-value product";
+    default: return "Unclassified product";
+  }
+}
+
+// Arrow function: formats Indian Rupee currency.
+const formatMoney = amount => new Intl.NumberFormat("en-IN", {
+  style: "currency", currency: "INR", minimumFractionDigits: 2
+}).format(amount);
+
+// Arrow function: safely calculates the total inventory value.
+const calculateTotal = items => items.reduce((total, item) => total + item.price, 0);
+
+// Regular function with local scope: calculates tax and discount.
+function calculateFinalPrice(items, taxPercent, discountPercent) {
+  const subtotal = calculateTotal(items); // Local variable
+  const discountAmount = subtotal * (discountPercent / 100);
+  const afterDiscount = subtotal - discountAmount;
+  const taxAmount = afterDiscount * (taxPercent / 100);
+  return {
+    subtotal,
+    discountAmount,
+    afterDiscount,
+    taxAmount,
+    finalTotal: afterDiscount + taxAmount
+  };
+}
+
+// Loops, continue and break: find products matching a search term.
+function searchProducts(term) {
+  const matches = [];
+  const cleanTerm = term.trim().toLowerCase();
+  if (!cleanTerm) return matches;
+
+  for (let i = 0; i < inventory.length; i++) {
+    const product = inventory[i];
+    if (!product || !product.name) continue; // Skip invalid entries
+    if (product.name.toLowerCase().includes(cleanTerm)) {
+      matches.push(product);
+      if (matches.length === 20) break; // Stop after 20 matches
+    }
+  }
+  return matches;
+}
+
+function renderInventory(items = inventory) {
+  visibleInventory = items;
+  const body = document.getElementById("inventoryBody");
+  body.innerHTML = "";
+  if (items.length === 0) {
+    body.innerHTML = '<tr><td class="empty" colspan="6">No products found.</td></tr>';
+    return;
+  }
+  items.forEach((product, index) => {
+    const category = getCategory(product.price);
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><input type="checkbox" class="product-select" value="${product.id}" aria-label="Select ${escapeHtml(product.name)}" style="width:auto"></td>
+      <td>${index + 1}</td>
+      <td title="${getCategoryDescription(category)}">${escapeHtml(product.name)}</td>
+      <td>${formatMoney(product.price)}</td>
+      <td><span class="badge ${category}">${category}</span></td>
+      <td><button class="danger delete-button" data-id="${product.id}" style="margin:0">Delete</button></td>`;
+    body.appendChild(row);
+  });
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[character]);
+}
+
+function updateAnalytics() {
+  const total = calculateTotal(inventory);
+  const average = inventory.length ? total / inventory.length : 0;
+  let premiumCount = 0;
+  for (const product of inventory) {
+    if (getCategory(product.price) === "Premium") premiumCount++;
+  }
+  document.getElementById("productCount").textContent = inventory.length;
+  document.getElementById("inventoryValue").textContent = formatMoney(total);
+  document.getElementById("averagePrice").textContent = formatMoney(average);
+  document.getElementById("premiumCount").textContent = premiumCount;
+}
+
+function refresh() {
+  updateAnalytics();
+  renderInventory(inventory);
+}
+
+document.getElementById("productForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const name = document.getElementById("productName").value.trim();
+  const price = Number(document.getElementById("productPrice").value); // Explicit conversion
+  const message = document.getElementById("addMessage");
+  message.className = "message";
+
+  if (!name) {
+    message.textContent = "Please enter a product name.";
+    message.classList.add("error");
+    return;
+  } else if (!Number.isFinite(price) || price <= 0) {
+    message.textContent = "Price must be a valid number greater than zero.";
+    message.classList.add("error");
+    return;
+  }
+
+  inventory.push({ id: nextId++, name, price });
+  const category = getCategory(price);
+  message.textContent = `${name} added successfully as a ${category} product.`;
+  document.getElementById("productName").value = "";
+  document.getElementById("productPrice").value = "";
+  refresh();
+});
+
+document.getElementById("searchButton").addEventListener("click", () => {
+  const term = document.getElementById("searchTerm").value;
+  if (!term.trim()) {
+    document.getElementById("searchMessage").textContent = "Enter a product name to search.";
+    document.getElementById("searchMessage").classList.add("error");
+    return;
+  }
+  const matches = searchProducts(term);
+  renderInventory(matches);
+  const msg = document.getElementById("searchMessage");
+  msg.className = "message";
+  msg.textContent = matches.length ? `${matches.length} matching product(s) found.` : "No matching products found.";
+});
+
+document.getElementById("showAllButton").addEventListener("click", () => {
+  document.getElementById("searchMessage").textContent = "";
+  renderInventory(inventory);
+});
+
+document.getElementById("inventoryBody").addEventListener("click", event => {
+  const button = event.target.closest(".delete-button");
+  if (!button) return;
+  const id = Number(button.dataset.id);
+  for (let i = 0; i < inventory.length; i++) {
+    if (inventory[i].id === id) {
+      inventory.splice(i, 1);
+      break;
+    }
+  }
+  refresh();
+});
+
+document.getElementById("calculateButton").addEventListener("click", () => {
+  const tax = Number(document.getElementById("taxRate").value);
+  const discount = Number(document.getElementById("discountRate").value);
+  const result = document.getElementById("calculationResult");
+  result.className = "message";
+  if (!Number.isFinite(tax) || !Number.isFinite(discount) || tax < 0 || tax > 100 || discount < 0 || discount > 100) {
+    result.textContent = "Tax and discount must each be between 0 and 100.";
+    result.classList.add("error");
+    return;
+  }
+  const selectedIds = Array.from(document.querySelectorAll(".product-select:checked")).map(box => Number(box.value));
+  const selected = selectedIds.length ? inventory.filter(item => selectedIds.includes(item.id)) : inventory;
+  if (!selected.length) {
+    result.textContent = "There are no products to calculate.";
+    result.classList.add("error");
+    return;
+  }
+  const totals = calculateFinalPrice(selected, tax, discount);
+  result.textContent = `Items: ${selected.length} | Subtotal: ${formatMoney(totals.subtotal)} | Discount: ${formatMoney(totals.discountAmount)} | Tax: ${formatMoney(totals.taxAmount)} | Final total: ${formatMoney(totals.finalTotal)}`;
+});
+
+refresh();
+</script>
+</body>
+</html>
